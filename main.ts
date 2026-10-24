@@ -298,48 +298,56 @@ namespace huskylensHebrew {
     // בלוקים ראשיים
     // ==========================================
 
+    //% group="אתחול והגדרות"
     //% block="אתחל תקשורת עם מצלמת האסקי"
     //% weight=100
     export function initI2C(): void {
         huskylens.initI2c();
     }
 
+    //% group="אתחול והגדרות"
     //% block="החלף מצב אלגוריתם ל- %mode"
     //% weight=95
     export function switchAlgorithm(mode: AlgorithmMode): void {
         huskylens.initMode(mode as any as protocolAlgorithm);
     }
 
+    //% group="קריאת נתונים ובדיקות"
     //% block="בקש נתונים פעם אחת ושמור בזיכרון"
     //% weight=90
     export function requestData(): void {
         huskylens.request();
     }
 
+    //% group="קריאת נתונים ובדיקות"
     //% block="כמות המטרות שנלמדו בסך הכל"
     //% weight=88
     export function getLearnedIDsCount(): number {
         return huskylens.getIds();
     }
 
+    //% group="קריאת נתונים ובדיקות"
     //% block="האם %ht מופיע על המסך?"
     //% weight=86
     export function isTypeOnScreen(ht: ResultType): boolean {
         return huskylens.isAppear_s(ht as any as HUSKYLENSResultType_t);
     }
 
+    //% group="עצם במרכז המסך"
     //% block="מחץ הקרוב ביותר למרכז המסך קבל את %prop"
     //% weight=84
     export function getCenterArrowData(prop: ArrowProperty): number {
         return huskylens.readArrow_s(prop as any as Content4);
     }
 
+    //% group="עצם במרכז המסך"
     //% block="ממסגרת הקרובה ביותר למרכז המסך קבל את %prop"
     //% weight=82
     export function getCenterBoxData(prop: TargetProperty): number {
         return huskylens.readBox_s(prop as any as Content3);
     }
 
+    //% group="מידע לפי מספר מטרה"
     //% block="האם מטרה בעלת מספר %id נלמדה במצלמה?"
     //% id.defl=1
     //% weight=80
@@ -347,6 +355,7 @@ namespace huskylensHebrew {
         return huskylens.isLearned(id);
     }
 
+    //% group="מידע לפי מספר מטרה"
     //% block="האם %ht של מטרה מס' %id מופיע על המסך?"
     //% id.defl=1
     //% weight=78
@@ -354,6 +363,7 @@ namespace huskylensHebrew {
         return huskylens.isAppear(id, ht as any as HUSKYLENSResultType_t);
     }
 
+    //% group="מידע לפי מספר מטרה"
     //% block="ממסגרת של מטרה מס' %id קבל את %prop"
     //% id.defl=1
     //% weight=76
@@ -361,6 +371,7 @@ namespace huskylensHebrew {
         return huskylens.readeBox(id, prop as any as Content1);
     }
 
+    //% group="מידע לפי מספר מטרה"
     //% block="מחץ של מטרה מס' %id קבל את %prop"
     //% id.defl=1
     //% weight=74
@@ -373,6 +384,7 @@ namespace huskylensHebrew {
     // ==========================================
 
     //% subcategory="עוד"
+    //% group="ספירה ומיקום לפי סדר"
     //% block="סך הכל פריטי %ht שמופיעים כרגע"
     //% weight=70
     export function getTotalCount(ht: ResultType): number {
@@ -380,15 +392,16 @@ namespace huskylensHebrew {
     }
 
     //% subcategory="עוד"
+    //% group="ספירה ומיקום לפי סדר"
     //% block="מחץ מס' %index שעל המסך קבל את %prop"
     //% index.defl=1
     //% weight=68
     export function getArrowDataByIndex(index: number, prop: ArrowProperty): number {
         return huskylens.readArrow_ss(index, prop as any as Content4);
-
     }
 
     //% subcategory="עוד"
+    //% group="ספירה ומיקום לפי סדר"
     //% block="ממסגרת מס' %index שעל המסך קבל את %prop"
     //% index.defl=1
     //% weight=66
@@ -397,6 +410,7 @@ namespace huskylensHebrew {
     }
 
     //% subcategory="עוד"
+    //% group="ספירה ומיקום לפי סדר"
     //% block="כמות פריטי %ht של מטרה מס' %id שמופיעים כרגע"
     //% id.defl=1
     //% weight=64
@@ -405,6 +419,7 @@ namespace huskylensHebrew {
     }
 
     //% subcategory="עוד"
+    //% group="ספירה ומיקום לפי סדר"
     //% block="ממסגרת מס' %index של מטרה מס' %id קבל את %prop"
     //% id.defl=1 index.defl=1
     //% weight=62
@@ -413,6 +428,7 @@ namespace huskylensHebrew {
     }
 
     //% subcategory="עוד"
+    //% group="ספירה ומיקום לפי סדר"
     //% block="מחץ מס' %index של מטרה מס' %id קבל את %prop"
     //% id.defl=1 index.defl=1
     //% weight=60
@@ -421,6 +437,7 @@ namespace huskylensHebrew {
     }
 
     //% subcategory="עוד"
+    //% group="למידה והגדרת שמות"
     //% block="למד אוטומטית פעם אחת מטרה מס' %id"
     //% id.defl=1
     //% weight=58
@@ -429,6 +446,7 @@ namespace huskylensHebrew {
     }
 
     //% subcategory="עוד"
+    //% group="למידה והגדרת שמות"
     //% block="שכח את כל המטרות שנלמדו באלגוריתם הנוכחי"
     //% weight=56
     export function forgetAll(): void {
@@ -436,6 +454,7 @@ namespace huskylensHebrew {
     }
 
     //% subcategory="עוד"
+    //% group="למידה והגדרת שמות"
     //% block="שנה שם של מטרה מס' %id לשם %name"
     //% id.defl=1 name.defl="רובוט"
     //% weight=54
@@ -444,6 +463,7 @@ namespace huskylensHebrew {
     }
 
     //% subcategory="עוד"
+    //% group="מסך ותצוגה"
     //% block="הצג כיתוב על המסך %text במיקומים אופקי: %x אנכי: %y"
     //% x.defl=150 y.defl=30
     //% weight=52
@@ -452,6 +472,7 @@ namespace huskylensHebrew {
     }
 
     //% subcategory="עוד"
+    //% group="מסך ותצוגה"
     //% block="נקה את כל הכיתובים ממסך המצלמה"
     //% weight=50
     export function clearCustomTexts(): void {
@@ -459,16 +480,19 @@ namespace huskylensHebrew {
     }
 
     //% subcategory="עוד"
+    //% group="כרטיס זיכרון"
     //% block="צלם תמונה ושמור בכרטיס הזיכרון"
     //% weight=48
     export function savePhotoToSD(): void {
-        huskylensHebrew.savePhotoToSD()    
+        huskylens.takePhotoToSDCard(HUSKYLENSphoto.PHOTO)
     }
 
     //% subcategory="עוד"
-    //% block="שמור צילום מסך בכרטיס הזיכרון"
-    //% weight=46
-    export function saveScreenshotToSD(): void {
-        huskylensHebrew.saveScreenshotToSD()
+    //% group="כרטיס זיכרון"
+    //% block="שמור מודל אלגוריתם נוכחי כקובץ מס' %data בכרטיס הזיכרון"
+    //% data.defl=0
+    //% weight=44
+    export function saveModelToSD(data: number): void {
+        huskylens.saveModelToTFCard(HUSKYLENSMode.SAVE, data);
     }
 }
