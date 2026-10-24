@@ -1,3 +1,7 @@
+//% subcategory="ספריות מקוריות"
+namespace huskylens {
+}
+
 //% color=#ff6800 icon="\uf25a" block="חיישן מחוות"
 namespace paj7620 {
     const PAJ7620_I2C_ADDR = 0x73; // כתובת ה-I2C של חיישן המחושים
@@ -339,7 +343,7 @@ namespace huskylensHebrew {
     /**
      * קריאת מספר ה-ID של העצם שנמצא במרכז המסך
      */
-    //% block="מספר ID של העצם במרכז המסך"
+    //% block="מספר העצם במרכז המסך"
     //% weight=70
     export function getCenterBoxID(): number {
         return huskylens.readBox_s(Content3.ID);
@@ -349,7 +353,7 @@ namespace huskylensHebrew {
      * קריאת מספר ה-ID של המטרה ה-N מתוך רשימת המטרות שנראות כרגע
      * @param index מספר המטרה (אינדקס 1 ומעלה)
      */
-    //% block="מספר ID של מטרה מס' %index שנראית כרגע"
+    //% block="מספר הזיהוי של העצם ה-%index שנראה כרגע"
     //% index.defl=1
     //% weight=65
     export function getNthBoxID(index: number): number {
