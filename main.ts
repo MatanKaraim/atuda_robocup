@@ -1,4 +1,4 @@
-//% deprecated=true
+//% advanced=true
 namespace huskylens {
 }
 
