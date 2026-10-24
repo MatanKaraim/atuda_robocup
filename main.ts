@@ -521,7 +521,7 @@ namespace huskylensHebrew {
 }
 
 /**
- * ספריית חיישן צבע TCS34725 מלאה בעברית
+ * ספריית חיישן צבע TCS34725 מלאה בעברית עם הגדרת ערכים ידנית
  */
 //% color="#e67e22" icon="\uf1fc" block="חיישן צבע TCS"
 namespace tcsColorSensor {
@@ -640,7 +640,7 @@ namespace tcsColorSensor {
         Unknown
     }
 
-    class CalibratedColor {
+    class ManualColorConfig {
         r: number;
         g: number;
         b: number;
@@ -655,11 +655,11 @@ namespace tcsColorSensor {
         }
     }
 
-    let savedSlots: CalibratedColor[] = [
-        new CalibratedColor(),
-        new CalibratedColor(),
-        new CalibratedColor(),
-        new CalibratedColor()
+    let customColors: ManualColorConfig[] = [
+        new ManualColorConfig(),
+        new ManualColorConfig(),
+        new ManualColorConfig(),
+        new ManualColorConfig()
     ];
 
     let ledPin: DigitalPin = DigitalPin.P0;
@@ -695,11 +695,9 @@ namespace tcsColorSensor {
             return false;
         }
 
-        // הגדרת ברירת מחדל: זמן דגימה 50ms, הגבר 4X
         write8(REG_ATIME, TCSTime.Time_50ms);
         write8(REG_CONTROL, TCSGain.Gain_4X);
 
-        // הפעלת מתנד ורכיב מדידה (PON | AEN)
         write8(REG_ENABLE, 0x01 | 0x02);
         basic.pause(50);
 
@@ -827,33 +825,34 @@ namespace tcsColorSensor {
     }
 
     // ==========================================
-    // כיול וזיהוי צבעים
+    // הגדרה ידנית וזיהוי צבעים
     // ==========================================
 
     /**
-     * דוגם את המשטח הנוכחי ושומר אותו עם טווח סטייה (Threshold) מותאם אישית
-     * @param slot משבצת הצבע לשמירה
-     * @param threshold טווח הסטייה המותר לזיהוי (מומלץ 15-45)
+     * מקליד ומגדיר ערכי צבע מותאם אישית (0-255) יחד עם טווח סטייה
+     * @param slot משבצת הצבע להגדרה
+     * @param r ערך אדום (0 עד 255)
+     * @param g ערך ירוק (0 עד 255)
+     * @param b ערך כחול (0 עד 255)
+     * @param threshold טווח הסטייה המותר (למשל: 25)
      */
     //% group="כיול וזיהוי צבעים"
-    //% block="דגום ושמור צבע %slot עם טווח סטייה %threshold"
-    //% threshold.defl=30
-    //% threshold.min=1 threshold.max=150
+    //% block="הגדר %slot לפי ערכים R: %r G: %g B: %b טווח סטייה: %threshold"
+    //% r.min=0 r.max=255 r.defl=150
+    //% g.min=0 g.max=255 g.defl=50
+    //% b.min=0 b.max=255 b.defl=50
+    //% threshold.min=1 threshold.max=200 threshold.defl=30
     //% weight=82
-    export function calibrateCustomColor(slot: CustomSlot, threshold: number): void {
-        let r = getChannelValue(TCSChannel.Red, ValueMode.Normalized);
-        let g = getChannelValue(TCSChannel.Green, ValueMode.Normalized);
-        let b = getChannelValue(TCSChannel.Blue, ValueMode.Normalized);
-
-        savedSlots[slot].r = r;
-        savedSlots[slot].g = g;
-        savedSlots[slot].b = b;
-        savedSlots[slot].threshold = threshold;
-        savedSlots[slot].isSet = true;
+    export function setCustomColorRGB(slot: CustomSlot, r: number, g: number, b: number, threshold: number): void {
+        customColors[slot].r = r;
+        customColors[slot].g = g;
+        customColors[slot].b = b;
+        customColors[slot].threshold = threshold;
+        customColors[slot].isSet = true;
     }
 
     function checkSlotMatch(slotIdx: number, r: number, g: number, b: number): boolean {
-        let s = savedSlots[slotIdx];
+        let s = customColors[slotIdx];
         if (!s.isSet) return false;
         let dr = r - s.r;
         let dg = g - s.g;
@@ -864,7 +863,7 @@ namespace tcsColorSensor {
 
     /**
      * בודק האם המשטח הנוכחי תואם לצבע מסוים
-     * @param target הצבע לבדיקה (מובנה או שמור)
+     * @param target הצבע לבדיקה (מובנה או מותאם שהוגדר ידנית)
      */
     //% group="כיול וזיהוי צבעים"
     //% block="האם מזוהה צבע %target ?"
@@ -875,13 +874,13 @@ namespace tcsColorSensor {
         let b = getChannelValue(TCSChannel.Blue, ValueMode.Normalized);
         let c = read16(REG_CDATAL);
 
-        // בדיקה עבור צבעים מכוילים
+        // בדיקה מול הצבעים שהוגדרו ידנית
         if (target === ColorTarget.Custom1) return checkSlotMatch(0, r, g, b);
         if (target === ColorTarget.Custom2) return checkSlotMatch(1, r, g, b);
         if (target === ColorTarget.Custom3) return checkSlotMatch(2, r, g, b);
         if (target === ColorTarget.Custom4) return checkSlotMatch(3, r, g, b);
 
-        // שחור ולבן מבוססים על סך האור ופרופורציות
+        // זיהוי שחור ולבן מובנה לפי סך האור הכללי
         if (target === ColorTarget.Black) {
             return c < 80;
         }
@@ -889,7 +888,7 @@ namespace tcsColorSensor {
             return c > 600 && Math.abs(r - g) < 25 && Math.abs(g - b) < 25;
         }
 
-        // זיהוי צבעי יסוד לפי דומיננטיות הערוצים
+        // צבעי יסוד מובנים לפי יחסי עוצמות
         if (target === ColorTarget.Red) {
             return r > g * 1.3 && r > b * 1.3;
         }
@@ -907,7 +906,7 @@ namespace tcsColorSensor {
     }
 
     /**
-     * מחזיר את שם הצבע שזוהה כרגע מתוך רשימת הצבעים (כולל מותאמים אישית)
+     * מחזיר את שם הצבע שזוהה כרגע (כולל צבעים שהוגדרו ידנית)
      */
     //% group="כיול וזיהוי צבעים"
     //% block="צבע שזוהה"
@@ -917,13 +916,13 @@ namespace tcsColorSensor {
         let g = getChannelValue(TCSChannel.Green, ValueMode.Normalized);
         let b = getChannelValue(TCSChannel.Blue, ValueMode.Normalized);
 
-        // עדיפות ראשונה: צבעים מותאמים אישית שנשמרו בכיול
+        // עדיפות לצבעים שהוגדרו ידנית
         if (checkSlotMatch(0, r, g, b)) return DetectedColorName.Custom1;
         if (checkSlotMatch(1, r, g, b)) return DetectedColorName.Custom2;
         if (checkSlotMatch(2, r, g, b)) return DetectedColorName.Custom3;
         if (checkSlotMatch(3, r, g, b)) return DetectedColorName.Custom4;
 
-        // עדיפות שנייה: צבעי בסיס
+        // צבעים מובנים
         if (isColor(ColorTarget.Black)) return DetectedColorName.Black;
         if (isColor(ColorTarget.White)) return DetectedColorName.White;
         if (isColor(ColorTarget.Red)) return DetectedColorName.Red;
