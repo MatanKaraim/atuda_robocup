@@ -1,6 +1,7 @@
 //% advanced=true
 namespace huskylens {
 }
+
 /**
  * ספריית חיישן מחוות PAJ7620U2
  */
@@ -516,5 +517,420 @@ namespace huskylensHebrew {
     //% weight=44
     export function saveModelToSD(data: number): void {
         huskylens.saveModelToTFCard(HUSKYLENSMode.SAVE, data);
+    }
+}
+
+/**
+ * ספריית חיישן צבע TCS34725 מלאה בעברית
+ */
+//% color="#e67e22" icon="\uf1fc" block="חיישן צבע TCS"
+namespace tcsColorSensor {
+
+    const TCS34725_ADDR = 0x29;
+    const COMMAND_BIT = 0x80;
+
+    const REG_ENABLE = 0x00;
+    const REG_ATIME = 0x01;
+    const REG_CONTROL = 0x0F;
+    const REG_ID = 0x12;
+
+    const REG_CDATAL = 0x14;
+    const REG_RDATAL = 0x16;
+    const REG_GDATAL = 0x18;
+    const REG_BDATAL = 0x1A;
+
+    export enum TCSChannel {
+        //% block="אדום (R)"
+        Red,
+        //% block="ירוק (G)"
+        Green,
+        //% block="כחול (B)"
+        Blue,
+        //% block="שקוף / עוצמת אור (Clear)"
+        Clear
+    }
+
+    export enum ValueMode {
+        //% block="מנורמל (0-255)"
+        Normalized,
+        //% block="גולמי (RAW)"
+        Raw
+    }
+
+    export enum TCSGain {
+        //% block="1X"
+        Gain_1X = 0x00,
+        //% block="4X"
+        Gain_4X = 0x01,
+        //% block="16X"
+        Gain_16X = 0x02,
+        //% block="60X"
+        Gain_60X = 0x03
+    }
+
+    export enum TCSTime {
+        //% block="2.4ms (מהיר מאוד)"
+        Time_2_4ms = 0xFF,
+        //% block="24ms"
+        Time_24ms = 0xF6,
+        //% block="50ms (מומלץ לרובוט)"
+        Time_50ms = 0xEB,
+        //% block="101ms"
+        Time_101ms = 0xD6,
+        //% block="154ms (מדויק)"
+        Time_154ms = 0xC0
+    }
+
+    export enum CustomSlot {
+        //% block="צבע מותאם 1"
+        Color1 = 0,
+        //% block="צבע מותאם 2"
+        Color2 = 1,
+        //% block="צבע מותאם 3"
+        Color3 = 2,
+        //% block="צבע מותאם 4"
+        Color4 = 3
+    }
+
+    export enum ColorTarget {
+        //% block="אדום"
+        Red,
+        //% block="ירוק"
+        Green,
+        //% block="כחול"
+        Blue,
+        //% block="צהוב"
+        Yellow,
+        //% block="לבן"
+        White,
+        //% block="שחור"
+        Black,
+        //% block="צבע מותאם 1"
+        Custom1,
+        //% block="צבע מותאם 2"
+        Custom2,
+        //% block="צבע מותאם 3"
+        Custom3,
+        //% block="צבע מותאם 4"
+        Custom4
+    }
+
+    export enum DetectedColorName {
+        //% block="אדום"
+        Red,
+        //% block="ירוק"
+        Green,
+        //% block="כחול"
+        Blue,
+        //% block="צהוב"
+        Yellow,
+        //% block="לבן"
+        White,
+        //% block="שחור"
+        Black,
+        //% block="צבע מותאם 1"
+        Custom1,
+        //% block="צבע מותאם 2"
+        Custom2,
+        //% block="צבע מותאם 3"
+        Custom3,
+        //% block="צבע מותאם 4"
+        Custom4,
+        //% block="לא ידוע"
+        Unknown
+    }
+
+    class CalibratedColor {
+        r: number;
+        g: number;
+        b: number;
+        threshold: number;
+        isSet: boolean;
+        constructor() {
+            this.r = 0;
+            this.g = 0;
+            this.b = 0;
+            this.threshold = 30;
+            this.isSet = false;
+        }
+    }
+
+    let savedSlots: CalibratedColor[] = [
+        new CalibratedColor(),
+        new CalibratedColor(),
+        new CalibratedColor(),
+        new CalibratedColor()
+    ];
+
+    let ledPin: DigitalPin = DigitalPin.P0;
+    let hasLedConfigured = false;
+
+    function write8(reg: number, val: number): void {
+        let buf = pins.createBuffer(2);
+        buf[0] = COMMAND_BIT | reg;
+        buf[1] = val;
+        pins.i2cWriteBuffer(TCS34725_ADDR, buf, false);
+    }
+
+    function read16(reg: number): number {
+        pins.i2cWriteNumber(TCS34725_ADDR, COMMAND_BIT | reg, NumberFormat.UInt8BE, true);
+        let buf = pins.i2cReadBuffer(TCS34725_ADDR, 2, false);
+        return buf[0] | (buf[1] << 8);
+    }
+
+    // ==========================================
+    // אתחול, הגדרות חומרה ושליטה בלד
+    // ==========================================
+
+    /**
+     * מאתחל את רכיב חיישן הצבע TCS34725
+     */
+    //% group="אתחול והגדרות"
+    //% block="אתחל חיישן צבע TCS"
+    //% weight=100
+    export function init(): boolean {
+        pins.i2cWriteNumber(TCS34725_ADDR, COMMAND_BIT | REG_ID, NumberFormat.UInt8BE, true);
+        let id = pins.i2cReadNumber(TCS34725_ADDR, NumberFormat.UInt8BE, false);
+        if (id != 0x44 && id != 0x4D) {
+            return false;
+        }
+
+        // הגדרת ברירת מחדל: זמן דגימה 50ms, הגבר 4X
+        write8(REG_ATIME, TCSTime.Time_50ms);
+        write8(REG_CONTROL, TCSGain.Gain_4X);
+
+        // הפעלת מתנד ורכיב מדידה (PON | AEN)
+        write8(REG_ENABLE, 0x01 | 0x02);
+        basic.pause(50);
+
+        return true;
+    }
+
+    /**
+     * מגדיר את הפין אליו מחובר הלד ומדליק אותו
+     * @param pin מספר הפין
+     */
+    //% group="אתחול והגדרות"
+    //% block="הגדר פין לד %pin והדלק"
+    //% pin.defl=DigitalPin.P0
+    //% weight=98
+    export function setupLedPin(pin: DigitalPin): void {
+        ledPin = pin;
+        hasLedConfigured = true;
+        pins.digitalWritePin(ledPin, 1);
+    }
+
+    /**
+     * קובע מצב דולק או כבוי ללד
+     * @param on דלוק / כבוי
+     */
+    //% group="אתחול והגדרות"
+    //% block="קבע לד חיישן צבע ל- %on"
+    //% on.shadow="toggleOnOff"
+    //% weight=96
+    export function setLed(on: boolean): void {
+        if (hasLedConfigured) {
+            pins.digitalWritePin(ledPin, on ? 1 : 0);
+        }
+    }
+
+    /**
+     * כוון את רגישות החיישן (הגבר)
+     * @param gain רמת ההגבר
+     */
+    //% group="אתחול והגדרות"
+    //% block="כוון רגישות (הגבר) ל- %gain"
+    //% weight=94
+    export function setGain(gain: TCSGain): void {
+        write8(REG_CONTROL, gain);
+    }
+
+    /**
+     * כוון את זמן דגימת הנתונים של החיישן
+     * @param time משך הדגימה
+     */
+    //% group="אתחול והגדרות"
+    //% block="כוון זמן דגימה ל- %time"
+    //% weight=92
+    export function setIntegrationTime(time: TCSTime): void {
+        write8(REG_ATIME, time);
+    }
+
+    // ==========================================
+    // קריאת נתונים ותצוגה
+    // ==========================================
+
+    /**
+     * קורא ערך מספרי עבור ערוץ צבע ספציפי (R, G, B או Clear)
+     * @param channel הערוץ לקריאה
+     * @param mode מצב ערך: מנורמל (0-255) או גולמי (RAW)
+     */
+    //% group="קריאת ערכים"
+    //% block="קרא ערוץ %channel בערך %mode"
+    //% weight=90
+    export function getChannelValue(channel: TCSChannel, mode: ValueMode): number {
+        let raw = 0;
+        switch (channel) {
+            case TCSChannel.Red: raw = read16(REG_RDATAL); break;
+            case TCSChannel.Green: raw = read16(REG_GDATAL); break;
+            case TCSChannel.Blue: raw = read16(REG_BDATAL); break;
+            case TCSChannel.Clear: raw = read16(REG_CDATAL); break;
+        }
+
+        if (mode === ValueMode.Raw) {
+            return raw;
+        }
+
+        let c = read16(REG_CDATAL);
+        if (c === 0) return 0;
+        if (channel === TCSChannel.Clear) return Math.min(255, c);
+
+        return Math.min(255, Math.round((raw / c) * 255));
+    }
+
+    /**
+     * מחזיר את עוצמת האור הכללית מהחיישן (ערך ערוץ ה-Clear)
+     */
+    //% group="קריאת ערכים"
+    //% block="עוצמת אור כללית (Clear)"
+    //% weight=88
+    export function getLightIntensity(): number {
+        return read16(REG_CDATAL);
+    }
+
+    /**
+     * מדפיס למוניטור הטורי (Serial) את ערכי הצבע המנורמלים (0-255)
+     */
+    //% group="מוניטור טורי"
+    //% block="הדפס למוניטור ערכים מנורמלים (0-255)"
+    //% weight=86
+    export function printNormalizedSerial(): void {
+        let r = getChannelValue(TCSChannel.Red, ValueMode.Normalized);
+        let g = getChannelValue(TCSChannel.Green, ValueMode.Normalized);
+        let b = getChannelValue(TCSChannel.Blue, ValueMode.Normalized);
+        let c = getChannelValue(TCSChannel.Clear, ValueMode.Normalized);
+        serial.writeLine("TCS [Norm] -> R: " + r + " | G: " + g + " | B: " + b + " | Clear: " + c);
+    }
+
+    /**
+     * מדפיס למוניטור הטורי (Serial) את ערכי הצבע הגולמיים (RAW)
+     */
+    //% group="מוניטור טורי"
+    //% block="הדפס למוניטור ערכים גולמיים (RAW)"
+    //% weight=84
+    export function printRawSerial(): void {
+        let r = getChannelValue(TCSChannel.Red, ValueMode.Raw);
+        let g = getChannelValue(TCSChannel.Green, ValueMode.Raw);
+        let b = getChannelValue(TCSChannel.Blue, ValueMode.Raw);
+        let c = getChannelValue(TCSChannel.Clear, ValueMode.Raw);
+        serial.writeLine("TCS [RAW]  -> R: " + r + " | G: " + g + " | B: " + b + " | Clear: " + c);
+    }
+
+    // ==========================================
+    // כיול וזיהוי צבעים
+    // ==========================================
+
+    /**
+     * דוגם את המשטח הנוכחי ושומר אותו עם טווח סטייה (Threshold) מותאם אישית
+     * @param slot משבצת הצבע לשמירה
+     * @param threshold טווח הסטייה המותר לזיהוי (מומלץ 15-45)
+     */
+    //% group="כיול וזיהוי צבעים"
+    //% block="דגום ושמור צבע %slot עם טווח סטייה %threshold"
+    //% threshold.defl=30
+    //% threshold.min=1 threshold.max=150
+    //% weight=82
+    export function calibrateCustomColor(slot: CustomSlot, threshold: number): void {
+        let r = getChannelValue(TCSChannel.Red, ValueMode.Normalized);
+        let g = getChannelValue(TCSChannel.Green, ValueMode.Normalized);
+        let b = getChannelValue(TCSChannel.Blue, ValueMode.Normalized);
+
+        savedSlots[slot].r = r;
+        savedSlots[slot].g = g;
+        savedSlots[slot].b = b;
+        savedSlots[slot].threshold = threshold;
+        savedSlots[slot].isSet = true;
+    }
+
+    function checkSlotMatch(slotIdx: number, r: number, g: number, b: number): boolean {
+        let s = savedSlots[slotIdx];
+        if (!s.isSet) return false;
+        let dr = r - s.r;
+        let dg = g - s.g;
+        let db = b - s.b;
+        let dist = Math.sqrt(dr * dr + dg * dg + db * db);
+        return dist <= s.threshold;
+    }
+
+    /**
+     * בודק האם המשטח הנוכחי תואם לצבע מסוים
+     * @param target הצבע לבדיקה (מובנה או שמור)
+     */
+    //% group="כיול וזיהוי צבעים"
+    //% block="האם מזוהה צבע %target ?"
+    //% weight=80
+    export function isColor(target: ColorTarget): boolean {
+        let r = getChannelValue(TCSChannel.Red, ValueMode.Normalized);
+        let g = getChannelValue(TCSChannel.Green, ValueMode.Normalized);
+        let b = getChannelValue(TCSChannel.Blue, ValueMode.Normalized);
+        let c = read16(REG_CDATAL);
+
+        // בדיקה עבור צבעים מכוילים
+        if (target === ColorTarget.Custom1) return checkSlotMatch(0, r, g, b);
+        if (target === ColorTarget.Custom2) return checkSlotMatch(1, r, g, b);
+        if (target === ColorTarget.Custom3) return checkSlotMatch(2, r, g, b);
+        if (target === ColorTarget.Custom4) return checkSlotMatch(3, r, g, b);
+
+        // שחור ולבן מבוססים על סך האור ופרופורציות
+        if (target === ColorTarget.Black) {
+            return c < 80;
+        }
+        if (target === ColorTarget.White) {
+            return c > 600 && Math.abs(r - g) < 25 && Math.abs(g - b) < 25;
+        }
+
+        // זיהוי צבעי יסוד לפי דומיננטיות הערוצים
+        if (target === ColorTarget.Red) {
+            return r > g * 1.3 && r > b * 1.3;
+        }
+        if (target === ColorTarget.Green) {
+            return g > r * 1.2 && g > b * 1.1;
+        }
+        if (target === ColorTarget.Blue) {
+            return b > r * 1.3 && b > g * 1.1;
+        }
+        if (target === ColorTarget.Yellow) {
+            return r > b * 1.4 && g > b * 1.4 && Math.abs(r - g) < 40;
+        }
+
+        return false;
+    }
+
+    /**
+     * מחזיר את שם הצבע שזוהה כרגע מתוך רשימת הצבעים (כולל מותאמים אישית)
+     */
+    //% group="כיול וזיהוי צבעים"
+    //% block="צבע שזוהה"
+    //% weight=78
+    export function getDetectedColor(): DetectedColorName {
+        let r = getChannelValue(TCSChannel.Red, ValueMode.Normalized);
+        let g = getChannelValue(TCSChannel.Green, ValueMode.Normalized);
+        let b = getChannelValue(TCSChannel.Blue, ValueMode.Normalized);
+
+        // עדיפות ראשונה: צבעים מותאמים אישית שנשמרו בכיול
+        if (checkSlotMatch(0, r, g, b)) return DetectedColorName.Custom1;
+        if (checkSlotMatch(1, r, g, b)) return DetectedColorName.Custom2;
+        if (checkSlotMatch(2, r, g, b)) return DetectedColorName.Custom3;
+        if (checkSlotMatch(3, r, g, b)) return DetectedColorName.Custom4;
+
+        // עדיפות שנייה: צבעי בסיס
+        if (isColor(ColorTarget.Black)) return DetectedColorName.Black;
+        if (isColor(ColorTarget.White)) return DetectedColorName.White;
+        if (isColor(ColorTarget.Red)) return DetectedColorName.Red;
+        if (isColor(ColorTarget.Green)) return DetectedColorName.Green;
+        if (isColor(ColorTarget.Blue)) return DetectedColorName.Blue;
+        if (isColor(ColorTarget.Yellow)) return DetectedColorName.Yellow;
+
+        return DetectedColorName.Unknown;
     }
 }
