@@ -1,4 +1,4 @@
-//% color=#ff6800 icon="\uf25a" block=" חיישן מחוות"
+//% color=#ff6800 icon="\uf25a" block="חיישן מחוות"
 namespace paj7620 {
     const PAJ7620_I2C_ADDR = 0x73; // כתובת ה-I2C של חיישן המחושים
 
