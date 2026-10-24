@@ -1,3 +1,4 @@
+//% deprecated=true
 //% subcategory="ספריות מקוריות"
 namespace huskylens {
 }
@@ -245,9 +246,9 @@ namespace yahboomTracker {
 }
 
 /**
- * ספריית מעטפת בעברית למצלמת HuskyLens
+ * ספריית מעטפת מלאה בעברית למצלמת HuskyLens
  */
-//% color="#2980b9" icon="\uf06e" block="מצלמה"
+//% color="#2980b9" icon="\uf06e" block="מצלמת האסקי"
 namespace huskylensHebrew {
 
     export enum AlgorithmMode {
@@ -276,87 +277,199 @@ namespace huskylensHebrew {
         Height = Content1.height
     }
 
-    /**
-     * אתחול המצלמה בתקשורת I2C
-     */
-    //% block="אתחל מצלמת האסקי"
+    export enum ArrowProperty {
+        //% block="התחלה X"
+        XOrigin = Content2.xOrigin,
+        //% block="התחלה Y"
+        YOrigin = Content2.yOrigin,
+        //% block="סיום X"
+        XTarget = Content2.xTarget,
+        //% block="סיום Y"
+        YTarget = Content2.yTarget
+    }
+
+    export enum ResultType {
+        //% block="מסגרת"
+        Frame = HUSKYLENSResultType_t.HUSKYLENSResultBlock,
+        //% block="חץ"
+        Arrow = HUSKYLENSResultType_t.HUSKYLENSResultArrow
+    }
+
+    // ==========================================
+    // בלוקים ראשיים
+    // ==========================================
+
+    //% block="אתחל מצלמת האסקי בתקשורת I2C"
     //% weight=100
-    export function init(): void {
+    export function initI2C(): void {
         huskylens.initI2c();
     }
 
-    /**
-     * קביעת מצב הפעולה / האלגוריתם של המצלמה
-     * @param mode מצב הפעולה שנבחר
-     */
-    //% block="הגדר מצב מצלמה ל- %mode"
+    //% block="החלף מצב אלגוריתם ל- %mode"
     //% weight=95
-    export function setMode(mode: AlgorithmMode): void {
-        // המרת טיפוס כדי למנוע את שגיאה 291
+    export function switchAlgorithm(mode: AlgorithmMode): void {
         huskylens.initMode(mode as any as protocolAlgorithm);
     }
 
-    /**
-     * בקשת נתונים עדכניים מהמצלמה (חובה לשים בתוך בלולאת 'לעולמים')
-     */
-    //% block="עדכן נתונים מהמצלמה"
+    //% block="בקש נתונים פעם אחת ושמור בזיכרון"
     //% weight=90
     export function requestData(): void {
         huskylens.request();
     }
 
-    /**
-     * בדיקה האם מטרה ספציפית נלמדה במצלמה
-     * @param id מזהה המטרה (ID)
-     */
-    //% block="האם מטרה %id נלמדה במצלמה?"
+    //% block="כמות מזהי ה-ID שנלמדו בסך הכל"
+    //% weight=88
+    export function getLearnedIDsCount(): number {
+        return huskylens.getIds();
+    }
+
+    //% block="האם %ht מופיע על המסך?"
+    //% weight=86
+    export function isTypeOnScreen(ht: ResultType): boolean {
+        return huskylens.isAppear_s(ht as any as HUSKYLENSResultType_t);
+    }
+
+    //% block="קבל מחץ הקרוב ביותר למרכז המסך את %prop"
+    //% weight=84
+    export function getCenterArrowData(prop: ArrowProperty): number {
+        return huskylens.readArrow_s(prop as any as Content4);
+    }
+
+    //% block="קבל ממסגרת הקרובה ביותר למרכז המסך את %prop"
+    //% weight=82
+    export function getCenterBoxData(prop: TargetProperty): number {
+        return huskylens.readBox_s(prop as any as Content3);
+    }
+
+    //% block="האם מזהה ID %id נלמד במצלמה?"
     //% id.defl=1
-    //% weight=85
+    //% weight=80
     export function isLearned(id: number): boolean {
         return huskylens.isLearned(id);
     }
 
-    /**
-     * בדיקה האם מטרה ספציפית מופיעה כרגע על המסך
-     * @param id מזהה המטרה (ID)
-     */
-    //% block="האם מטרה %id מופיעה על המסך?"
+    //% block="האם %ht של מזהה ID %id מופיע על המסך?"
     //% id.defl=1
-    //% weight=80
-    export function isTargetVisible(id: number): boolean {
-        return huskylens.isAppear(id, HUSKYLENSResultType_t.HUSKYLENSResultBlock);
+    //% weight=78
+    export function isIdOnScreen(id: number, ht: ResultType): boolean {
+        return huskylens.isAppear(id, ht as any as HUSKYLENSResultType_t);
     }
 
-    /**
-     * קריאת ערך מיקום/גודל של מטרה מסוימת לפי ה-ID שלה
-     * @param id מזהה המטרה
-     * @param prop המאפיין המבוקש (X, Y, רוחב, גובה)
-     */
-    //% block="קבל ממטרה %id את %prop"
+    //% block="קבל ממסגרת של מזהה ID %id את %prop"
     //% id.defl=1
-    //% weight=75
-    export function readTargetProperty(id: number, prop: TargetProperty): number {
-        // המרת טיפוס כדי למנוע את שגיאה 334
+    //% weight=76
+    export function getBoxDataByID(id: number, prop: TargetProperty): number {
         return huskylens.readeBox(id, prop as any as Content1);
     }
 
-    /**
-     * קריאת מספר ה-ID של העצם שנמצא במרכז המסך
-     */
-    //% block="מספר העצם במרכז המסך"
-    //% weight=70
-    export function getCenterBoxID(): number {
-        return huskylens.readBox_s(Content3.ID);
+    //% block="קבל מחץ של מזהה ID %id את %prop"
+    //% id.defl=1
+    //% weight=74
+    export function getArrowDataByID(id: number, prop: ArrowProperty): number {
+        return huskylens.readeArrow(id, prop as any as Content2);
     }
 
-    /**
-     * קריאת מספר ה-ID של המטרה ה-N מתוך רשימת המטרות שנראות כרגע
-     * @param index מספר המטרה (אינדקס 1 ומעלה)
-     */
-    //% block="מספר הזיהוי של העצם ה-%index שנראה כרגע"
+    // ==========================================
+    // בלוקים מתקדמים - לשונית "עוד"
+    // ==========================================
+
+    //% subcategory="עוד"
+    //% block="כמות כללי של %ht שמופיעים כרגע"
+    //% weight=70
+    export function getTotalCount(ht: ResultType): number {
+        return huskylens.getBox(ht as any as HUSKYLENSResultType_t);
+    }
+
+    //% subcategory="עוד"
+    //% block="קבל מחץ מס' %index שעל המסך את %prop"
     //% index.defl=1
-    //% weight=65
-    export function getNthBoxID(index: number): number {
-        return huskylens.readBox_ss(index, Content3.ID);
+    //% weight=68
+    export function getArrowDataByIndex(index: number, prop: ArrowProperty): number {
+        return huskylens.readArrow_ss(index, prop as any as Content4);
+    }
+
+    //% subcategory="עוד"
+    //% block="קבל ממסגרת מס' %index שעל המסך את %prop"
+    //% index.defl=1
+    //% weight=66
+    export function getBoxDataByIndex(index: number, prop: TargetProperty): number {
+        return huskylens.readBox_ss(index, prop as any as Content3);
+    }
+
+    //% subcategory="עוד"
+    //% block="כמות של מזהה ID %id מסוג %ht שמופיעים כרגע"
+    //% id.defl=1
+    //% weight=64
+    export function getCountByID(id: number, ht: ResultType): number {
+        return huskylens.getBox_S(id, ht as any as HUSKYLENSResultType_t);
+    }
+
+    //% subcategory="עוד"
+    //% block="קבל ממסגרת מס' %index של מזהה ID %id את %prop"
+    //% id.defl=1 index.defl=1
+    //% weight=62
+    export function getBoxDataByIndexAndID(id: number, index: number, prop: TargetProperty): number {
+        return huskylens.readeBox_index(id, index, prop as any as Content1);
+    }
+
+    //% subcategory="עוד"
+    //% block="קבל מחץ מס' %index של מזהה ID %id את %prop"
+    //% id.defl=1 index.defl=1
+    //% weight=60
+    export function getArrowDataByIndexAndID(id: number, index: number, prop: ArrowProperty): number {
+        return huskylens.readeArrow_index(id, index, prop as any as Content2);
+    }
+
+    //% subcategory="עוד"
+    //% block="למד אוטומטית פעם אחת מזהה ID %id"
+    //% id.defl=1
+    //% weight=58
+    export function learnOnce(id: number): void {
+        huskylens.writeLearn1(id);
+    }
+
+    //% subcategory="עוד"
+    //% block="שכח את כל המטרות שנלמדו באלגוריתם הנוכחי"
+    //% weight=56
+    export function forgetAll(): void {
+        huskylens.forgetLearn();
+    }
+
+    //% subcategory="עוד"
+    //% block="תן שם למזהה ID %id בשם %name"
+    //% id.defl=1 name.defl="Robot"
+    //% weight=54
+    export function setIDName(id: number, name: string): void {
+        huskylens.writeName(id, name);
+    }
+
+    //% subcategory="עוד"
+    //% block="הצג כיתוב על המסך %text במיקום X: %x Y: %y"
+    //% x.defl=150 y.defl=30
+    //% weight=52
+    export function showCustomText(text: string, x: number, y: number): void {
+        huskylens.writeOSD(text, x, y);
+    }
+
+    //% subcategory="עוד"
+    //% block="נקה את כל הכיתובים ממסך המצלמה"
+    //% weight=50
+    export function clearCustomTexts(): void {
+        huskylens.clearOSD();
+    }
+
+    //% subcategory="עוד"
+    //% block="צלם תמונה ושמור בכרטיס SD"
+    //% weight=48
+    export function savePhotoToSD(): void {
+        huskylens.takePhotoToSDCard(HUSKYLENSphoto.PHOTO);
+    }
+    
+
+    //% subcategory="עוד"
+    //% block="שמור צילום מסך בכרטיס SD"
+    //% weight=46
+    export function saveScreenshotToSD(): void {
+        huskylens.takePhotoToSDCard(HUSKYLENSphoto.PHOTO);
     }
 }
