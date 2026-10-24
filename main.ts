@@ -1,4 +1,4 @@
-//% color=#ff6800 icon="\uf25a" block="PAJ7620 חיישן מחוות"
+//% color=#ff6800 icon="\uf25a" block=" חיישן מחוות"
 namespace paj7620 {
     const PAJ7620_I2C_ADDR = 0x73; // כתובת ה-I2C של חיישן המחושים
 
@@ -237,5 +237,122 @@ namespace yahboomTracker {
         if (ch > 8) ch = 8;
         let shift = 8 - ch;
         return (data >> shift) & 0x01;
+    }
+}
+
+/**
+ * ספריית מעטפת בעברית למצלמת HuskyLens
+ */
+//% color="#2980b9" icon="\uf06e" block="מצלמה"
+namespace huskylensHebrew {
+
+    export enum AlgorithmMode {
+        //% block="זיהוי פנים"
+        FaceRecognition = protocolAlgorithm.ALGORITHM_FACE_RECOGNITION,
+        //% block="מעקב אחר עצם"
+        ObjectTracking = protocolAlgorithm.ALGORITHM_OBJECT_TRACKING,
+        //% block="זיהוי עצמים"
+        ObjectRecognition = protocolAlgorithm.ALGORITHM_OBJECT_RECOGNITION,
+        //% block="מעקב אחר קו"
+        LineTracking = protocolAlgorithm.ALGORITHM_LINE_TRACKING,
+        //% block="זיהוי צבעים"
+        ColorRecognition = protocolAlgorithm.ALGORITHM_COLOR_RECOGNITION,
+        //% block="זיהוי תגיות (QR)"
+        TagRecognition = protocolAlgorithm.ALGORITHM_TAG_RECOGNITION
+    }
+
+    export enum TargetProperty {
+        //% block="מרכז X"
+        XCenter = Content1.xCenter,
+        //% block="מרכז Y"
+        YCenter = Content1.yCenter,
+        //% block="רוחב"
+        Width = Content1.width,
+        //% block="גובה"
+        Height = Content1.height
+    }
+
+    /**
+     * אתחול המצלמה בתקשורת I2C
+     */
+    //% block="אתחל מצלמת האסקי"
+    //% weight=100
+    export function init(): void {
+        huskylens.initI2c();
+    }
+
+    /**
+     * קביעת מצב הפעולה / האלגוריתם של המצלמה
+     * @param mode מצב הפעולה שנבחר
+     */
+    //% block="הגדר מצב מצלמה ל- %mode"
+    //% weight=95
+    export function setMode(mode: AlgorithmMode): void {
+        // המרת טיפוס כדי למנוע את שגיאה 291
+        huskylens.initMode(mode as any as protocolAlgorithm);
+    }
+
+    /**
+     * בקשת נתונים עדכניים מהמצלמה (חובה לשים בתוך בלולאת 'לעולמים')
+     */
+    //% block="עדכן נתונים מהמצלמה"
+    //% weight=90
+    export function requestData(): void {
+        huskylens.request();
+    }
+
+    /**
+     * בדיקה האם מטרה ספציפית נלמדה במצלמה
+     * @param id מזהה המטרה (ID)
+     */
+    //% block="האם מטרה %id נלמדה במצלמה?"
+    //% id.defl=1
+    //% weight=85
+    export function isLearned(id: number): boolean {
+        return huskylens.isLearned(id);
+    }
+
+    /**
+     * בדיקה האם מטרה ספציפית מופיעה כרגע על המסך
+     * @param id מזהה המטרה (ID)
+     */
+    //% block="האם מטרה %id מופיעה על המסך?"
+    //% id.defl=1
+    //% weight=80
+    export function isTargetVisible(id: number): boolean {
+        return huskylens.isAppear(id, HUSKYLENSResultType_t.HUSKYLENSResultBlock);
+    }
+
+    /**
+     * קריאת ערך מיקום/גודל של מטרה מסוימת לפי ה-ID שלה
+     * @param id מזהה המטרה
+     * @param prop המאפיין המבוקש (X, Y, רוחב, גובה)
+     */
+    //% block="קבל ממטרה %id את %prop"
+    //% id.defl=1
+    //% weight=75
+    export function readTargetProperty(id: number, prop: TargetProperty): number {
+        // המרת טיפוס כדי למנוע את שגיאה 334
+        return huskylens.readeBox(id, prop as any as Content1);
+    }
+
+    /**
+     * קריאת מספר ה-ID של העצם שנמצא במרכז המסך
+     */
+    //% block="מספר ID של העצם במרכז המסך"
+    //% weight=70
+    export function getCenterBoxID(): number {
+        return huskylens.readBox_s(Content3.ID);
+    }
+
+    /**
+     * קריאת מספר ה-ID של המטרה ה-N מתוך רשימת המטרות שנראות כרגע
+     * @param index מספר המטרה (אינדקס 1 ומעלה)
+     */
+    //% block="מספר ID של מטרה מס' %index שנראית כרגע"
+    //% index.defl=1
+    //% weight=65
+    export function getNthBoxID(index: number): number {
+        return huskylens.readBox_ss(index, Content3.ID);
     }
 }
